@@ -68,6 +68,18 @@ const waterSlots = [
     ]
   },
   {
+    start: '20:21',
+    end: '20:24',
+    messages: [
+      '🌙 Evening hydration check before you spend 4 hours rotting peacefully online.',
+      '💧 One more glass of water so your organs don’t unfollow you overnight.',
+      '❤️ Drink water, gorgeous. We’re aiming for “thriving,” not “surviving somehow.”',
+      '💦 Hydrate before dinner and stop acting like garlic bread fixes everything.',
+      '🌿 Your body deserves water after carrying your attractive dumbass all day.',
+      '✨ Fun fact: water improves mood, skin, and your chances of not becoming dust.'
+    ]
+  },
+  {
     start: '21:00',
     end: '22:30',
     messages: [
@@ -119,29 +131,36 @@ function getRandomMessage(messagesArray) {
   return messagesArray[Math.floor(Math.random() * messagesArray.length)];
 }
 
+// === IMPROVED SCHEDULER ===
 function scheduleReminderAt(timeStr, message) {
-  const now = new Date();
-  const [hour, minute] = timeStr.split(':').map(Number);
-  let target = new Date(now);
-  target.setHours(hour, minute, 0, 0);
+  const [targetHour, targetMinute] = timeStr.split(':').map(Number);
 
+  const now = new Date();
+  let target = new Date(now);
+
+  target.setHours(targetHour, targetMinute, 0, 0);
+
+  // If target time has already passed today → move to tomorrow
   if (target <= now) {
     target.setDate(target.getDate() + 1);
   }
 
   const delayMs = target.getTime() - now.getTime();
 
-  setTimeout(() => sendTelegramMessage(message), delayMs);
-  console.log(`✅ Scheduled: ${timeStr} → ${message.substring(0, 50)}...`);
+  console.log(`✅ Scheduled: ${timeStr} | Delay: ${(delayMs / 1000 / 60 / 60).toFixed(1)} hours → ${message.substring(0, 60)}...`);
+
+  setTimeout(() => {
+    sendTelegramMessage(message);
+  }, delayMs);
 }
 
-// ====================== TEST FUNCTION ======================
+// ====================== TEST ======================
 async function sendTestMessage() {
-  const testMsg = '🧪 This is a TEST message from your reminder bot!\n\nRandom surprise mode is active ✅';
+  const testMsg = '🧪 TEST message from reminder bot!\nRandom surprise mode active ✅';
   await sendTelegramMessage(testMsg);
 }
 
-// Main send function
+// Main sender
 async function sendTelegramMessage(text) {
   for (const chatId of CHAT_IDS) {
     const url = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`;
@@ -149,17 +168,16 @@ async function sendTelegramMessage(text) {
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: text,
-          parse_mode: 'HTML'
-        })
+        body: JSON.stringify({ chat_id: chatId, text: text, parse_mode: 'HTML' })
       });
 
-      if (!response.ok) throw new Error(`HTTP ${response.status} for chat ${chatId}`);
-      console.log(`📤 Message sent to ${chatId} at ${new Date().toLocaleTimeString()}`);
+      if (response.ok) {
+        console.log(`📤 Sent to ${chatId} at ${new Date().toLocaleTimeString()}`);
+      } else {
+        console.error(`❌ Failed to ${chatId}: HTTP ${response.status}`);
+      }
     } catch (error) {
-      console.error(`❌ Failed to send to ${chatId}:`, error.message);
+      console.error(`❌ Error sending to ${chatId}:`, error.message);
     }
   }
 }
@@ -169,34 +187,31 @@ async function sendTelegramMessage(text) {
 // ==============================================
 
 function runDailyPlanner() {
-  console.log('🗓️ Running daily random reminder planner...');
+  console.log(`\n🗓️ [${new Date().toLocaleString()}] Running daily random planner...`);
 
-  // Water reminders with random message from pool
   waterSlots.forEach(slot => {
     const randomTime = getRandomTimeInSlot(slot.start, slot.end);
-    const randomMessage = getRandomMessage(slot.messages);
-    scheduleReminderAt(randomTime, randomMessage);
+    const randomMsg = getRandomMessage(slot.messages);
+    scheduleReminderAt(randomTime, randomMsg);
   });
 
-  // Medicine (single random message)
-  const medRandomTime = getRandomTimeInSlot(medicineSlot.start, medicineSlot.end);
-  const medRandomMessage = getRandomMessage(medicineSlot.messages);
-  scheduleReminderAt(medRandomTime, medRandomMessage);
+  const medTime = getRandomTimeInSlot(medicineSlot.start, medicineSlot.end);
+  const medMsg = getRandomMessage(medicineSlot.messages);
+  scheduleReminderAt(medTime, medMsg);
 }
 
-// Schedule planner at midnight
+// Midnight re-planner
 cron.schedule('0 0 * * *', runDailyPlanner, { timezone: TIMEZONE });
 
 // ==============================================
-//  STARTUP
+//  START
 // ==============================================
 
-console.log('🚀 Random-reminder bot started on Laptop!');
+console.log('🚀 Random-reminder bot started!');
 
 if (process.argv[2] === 'test') {
-  console.log('🧪 Test mode activated...');
   sendTestMessage();
 } else {
   runDailyPlanner();
-  sendTelegramMessage('✅ Woho!! Get ready for your daily reminders.');
+  sendTelegramMessage('✅ Bot is live! Random reminders scheduled for today.');
 }
