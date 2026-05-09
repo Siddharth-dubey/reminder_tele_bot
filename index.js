@@ -68,18 +68,6 @@ const waterSlots = [
     ]
   },
   {
-    start: '20:21',
-    end: '20:24',
-    messages: [
-      '🌙 Evening hydration check before you spend 4 hours rotting peacefully online.',
-      '💧 One more glass of water so your organs don’t unfollow you overnight.',
-      '❤️ Drink water, gorgeous. We’re aiming for “thriving,” not “surviving somehow.”',
-      '💦 Hydrate before dinner and stop acting like garlic bread fixes everything.',
-      '🌿 Your body deserves water after carrying your attractive dumbass all day.',
-      '✨ Fun fact: water improves mood, skin, and your chances of not becoming dust.'
-    ]
-  },
-  {
     start: '21:00',
     end: '22:30',
     messages: [
