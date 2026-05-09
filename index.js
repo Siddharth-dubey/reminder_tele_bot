@@ -28,7 +28,7 @@ const waterSlots = [
       '☀️ You can’t survive on caffeine, delusion, and my attention alone.',
       '💦 Drink water before your body screenshots this abuse for evidence.',
       '❤️ Hydrate first. Looking cute during organ failure is not a flex.',
-      '🌅 Morning reminder: your cells are drier than my texting style.'
+      '🌅 Morning reminder: your lips are drier than my texting style. Drink some water.'
     ]
   },
   {
@@ -62,7 +62,7 @@ const waterSlots = [
       '🌙 Evening hydration check before you spend 4 hours rotting peacefully online.',
       '💧 One more glass of water so your organs don’t unfollow you overnight.',
       '❤️ Drink water, gorgeous. We’re aiming for “thriving,” not “surviving somehow.”',
-      '💦 Hydrate before dinner and stop acting like garlic bread fixes everything.',
+      '💦 Hydrate before dinner and stop acting like Diet coke fixes everything.',
       '🌿 Your body deserves water after carrying your attractive dumbass all day.',
       '✨ Fun fact: water improves mood, skin, and your chances of not becoming dust.'
     ]
@@ -72,11 +72,12 @@ const waterSlots = [
     end: '22:30',
     messages: [
       '🌙 Late-night reminder: drink water before you enter corpse mode for 8 hours.',
-      '💧 Hydrate before bed so tomorrow-you suffers slightly less.',
+      '💧 Hydrate before bed so tomorrow-you suffer slightly less.',
       '❤️ Goodnight, you dehydrated little disaster. Go drink water.',
-      '💦 One last sip before your body files a complaint against you.',
-      '🌿 Imagine being hydrated AND hot. You’re halfway there already.',
-      '✨ Sleep well. Try not to wake up feeling like expired beef jerky.'
+      '💦 One glass of water won’t kill you. Probably.',
+      '🔥 Imagine being hydrated & hot. You’re halfway there already.',
+      '😍 🌿 Go sip some water, you beautiful disaster.',
+      '💧 Drink water. Being cute won’t save you forever.'
     ]
   }
 ];
@@ -149,8 +150,11 @@ async function sendTestMessage() {
 }
 
 // Main sender
-async function sendTelegramMessage(text) {
+async function sendTelegramMessage(text, type) {
   for (const chatId of CHAT_IDS) {
+    if (type === "start" && chatId[0] === "6") {
+      return;
+    }
     const url = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`;
     try {
       const response = await fetch(url, {
@@ -201,5 +205,5 @@ if (process.argv[2] === 'test') {
   sendTestMessage();
 } else {
   runDailyPlanner();
-  sendTelegramMessage('✅ Bot is live! Random reminders scheduled for today.');
+  sendTelegramMessage('✅ Bot is live! Random reminders scheduled for today.', "start");
 }
