@@ -48,7 +48,7 @@ const waterSlots = [
     end: '16:30',
     messages: [
       '💧 Afternoon reminder: dehydration is not the personality trait you think it is.',
-      '☕ Another coffee? Your kidneys just fell to their knees dramatically.',
+      '💦 Water , water everywhere and not a drop for Priya(s) kidneys.',
       '💦 Drink water before your brain starts buffering in real life.',
       '✨ You’re cute, but not “hospital visit from lack of water” cute.',
       '❤️ Hydrate right now or I’ll start flirting with someone who values electrolytes.',
@@ -101,109 +101,90 @@ const medicineSlot = {
 // ==============================================
 //  HELPER FUNCTIONS
 // ==============================================
-
 function parseTimeToMinutes(timeStr) {
   const [h, m] = timeStr.split(':').map(Number);
   return h * 60 + m;
 }
 
 function getRandomTimeInSlot(startStr, endStr) {
-  const startMin = parseTimeToMinutes(startStr);
-  const endMin = parseTimeToMinutes(endStr);
-  const randomMin = Math.floor(Math.random() * (endMin - startMin + 1)) + startMin;
-  const hour = Math.floor(randomMin / 60);
-  const minute = randomMin % 60;
-  return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+  const start = parseTimeToMinutes(startStr);
+  const end = parseTimeToMinutes(endStr);
+  const randomMin = Math.floor(Math.random() * (end - start + 1)) + start;
+  const h = Math.floor(randomMin / 60);
+  const m = randomMin % 60;
+  return { hour: h, minute: m, timeStr: `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}` };
 }
 
-function getRandomMessage(messagesArray) {
-  return messagesArray[Math.floor(Math.random() * messagesArray.length)];
+function getRandomMessage(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
 }
 
-// === IMPROVED SCHEDULER ===
-function scheduleReminderAt(timeStr, message) {
-  const [targetHour, targetMinute] = timeStr.split(':').map(Number);
-
-  const now = new Date();
-  let target = new Date(now);
-
-  target.setHours(targetHour, targetMinute, 0, 0);
-
-  // If target time has already passed today → move to tomorrow
-  if (target <= now) {
-    target.setDate(target.getDate() + 1);
-  }
-
-  const delayMs = target.getTime() - now.getTime();
-
-  console.log(`✅ Scheduled: ${timeStr} | Delay: ${(delayMs / 1000 / 60 / 60).toFixed(1)} hours → ${message.substring(0, 60)}...`);
-
-  setTimeout(() => {
-    sendTelegramMessage(message);
-  }, delayMs);
-}
-
-// ====================== TEST ======================
-async function sendTestMessage() {
-  const testMsg = '🧪 TEST message from reminder bot!\nRandom surprise mode active ✅';
-  await sendTelegramMessage(testMsg);
-}
-
-// Main sender
-async function sendTelegramMessage(text, type) {
+// ==================== SENDER ====================
+async function sendTelegramMessage(text) {
   for (const chatId of CHAT_IDS) {
-    if (type === "start" && chatId[0] === "6") {
-      return;
-    }
-    const url = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`;
     try {
-      const response = await fetch(url, {
+      const url = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`;
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: chatId, text: text, parse_mode: 'HTML' })
+        body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' })
       });
 
-      if (response.ok) {
-        console.log(`📤 Sent to ${chatId} at ${new Date().toLocaleTimeString()}`);
+      if (res.ok) {
+        console.log(`📤 Sent to ${chatId} | ${new Date().toLocaleTimeString()}`);
       } else {
-        console.error(`❌ Failed to ${chatId}: HTTP ${response.status}`);
+        console.error(`❌ HTTP ${res.status} to ${chatId}`);
       }
-    } catch (error) {
-      console.error(`❌ Error sending to ${chatId}:`, error.message);
+    } catch (e) {
+      console.error(`❌ Send error:`, e.message);
     }
   }
 }
 
-// ==============================================
-//  DAILY PLANNER
-// ==============================================
+// ==================== DAILY SCHEDULER ====================
+function scheduleTodaysReminders() {
+  console.log(`\n🗓️ [${new Date().toLocaleString()}] Planning today's random reminders...`);
 
-function runDailyPlanner() {
-  console.log(`\n🗓️ [${new Date().toLocaleString()}] Running daily random planner...`);
+  // Water reminders
+  waterSlots.forEach((slot, i) => {
+    const { hour, minute, timeStr } = getRandomTimeInSlot(slot.start, slot.end);
+    const message = getRandomMessage(slot.messages);
 
-  waterSlots.forEach(slot => {
-    const randomTime = getRandomTimeInSlot(slot.start, slot.end);
-    const randomMsg = getRandomMessage(slot.messages);
-    scheduleReminderAt(randomTime, randomMsg);
+    const cronExpr = `${minute} ${hour} * * *`;
+
+    cron.schedule(cronExpr, () => {
+      sendTelegramMessage(message);
+    }, {
+      timezone: TIMEZONE,
+      name: `water-${i}`
+    });
+
+    console.log(`${timeStr} → W: ${message}`);
   });
 
-  const medTime = getRandomTimeInSlot(medicineSlot.start, medicineSlot.end);
-  const medMsg = getRandomMessage(medicineSlot.messages);
-  scheduleReminderAt(medTime, medMsg);
+  // Medicine reminder
+  const { hour: medHour, minute: medMinute, timeStr: medTime } = getRandomTimeInSlot(medicineSlot.start, medicineSlot.end);
+  const medMessage = getRandomMessage(medicineSlot.messages);
+
+  cron.schedule(`${medMinute} ${medHour} * * *`, () => {
+    sendTelegramMessage(medMessage);
+  }, {
+    timezone: TIMEZONE,
+    name: `medicine`
+  });
+
+  console.log(`${medTime} → M: ${medMessage}`);
 }
 
-// Midnight re-planner
-cron.schedule('0 0 * * *', runDailyPlanner, { timezone: TIMEZONE });
+// ==================== RUN EVERY DAY ====================
+cron.schedule('0 0 * * *', scheduleTodaysReminders, { timezone: TIMEZONE });
 
-// ==============================================
-//  START
-// ==============================================
-
-console.log('🚀 Random-reminder bot started!');
+// Initial run
+console.log('🚀 Random Reminder Bot Started (using node-cron only)');
 
 if (process.argv[2] === 'test') {
-  sendTestMessage();
+  sendTelegramMessage('🧪 TEST message — bot is working with node-cron!');
 } else {
-  runDailyPlanner();
-  sendTelegramMessage('✅ Bot is live! Random reminders scheduled for today.', "start");
+  scheduleTodaysReminders();
+  // sendTelegramMessage('✅ Bot is live! Random reminders scheduled for today.');
 }
