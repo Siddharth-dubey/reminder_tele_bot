@@ -148,7 +148,7 @@ function scheduleTodaysReminders() {
   // Water reminders
   waterSlots.forEach((slot, i) => {
     const { hour, minute, timeStr } = getRandomTimeInSlot(slot.start, slot.end);
-    const message = getRandomMessage(slot.messages);
+    const message = "💧 WATER :  " + getRandomMessage(slot.messages);
 
     const cronExpr = `${minute} ${hour} * * *`;
 
@@ -164,7 +164,7 @@ function scheduleTodaysReminders() {
 
   // Medicine reminder
   const { hour: medHour, minute: medMinute, timeStr: medTime } = getRandomTimeInSlot(medicineSlot.start, medicineSlot.end);
-  const medMessage = getRandomMessage(medicineSlot.messages);
+  const medMessage = "💊 MEDICINE :  " + getRandomMessage(medicineSlot.messages);
 
   cron.schedule(`${medMinute} ${medHour} * * *`, () => {
     sendTelegramMessage(medMessage);
