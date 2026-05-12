@@ -28,7 +28,10 @@ const waterSlots = [
       '☀️ You can’t survive on caffeine, delusion, and my attention alone.',
       '💦 Drink water before your body screenshots this abuse for evidence.',
       '❤️ Hydrate first. Looking cute during organ failure is not a flex.',
-      '🌅 Morning reminder: your lips are drier than my texting style. Drink some water.'
+      '🌅 Morning reminder: your lips are drier than my texting style. Drink some water.',
+      "🌊 No I'm not going to say good morning until you drink water. I'll wait.",
+      "🫙 Drink water before you make any decisions today. I'm doing you a favour, honestly.",
+      "🕵️ Scientists are baffled. How is she still functioning? More at 11. Drink water."
     ]
   },
   {
@@ -40,7 +43,9 @@ const waterSlots = [
       '☀️ Drink water, babe. Your headaches are getting too confident.',
       '💦 Quick reminder: surviving purely out of spite still requires hydration.',
       '❤️ Your body called. It said “please… just one glass.”',
-      '🌿 Hydrate yourself before your organs start a group protest.'
+      '🌿 Hydrate yourself before your organs start a group protest.',
+      "🥤 That Diet Coke with your lunch is not water. We've talked about this.",
+      "🫦 Drink water. Chapped lips are not the vibe you think they are."
     ]
   },
   {
@@ -52,7 +57,9 @@ const waterSlots = [
       '💦 Drink water before your brain starts buffering in real life.',
       '✨ You’re cute, but not “hospital visit from lack of water” cute.',
       '❤️ Hydrate right now or I’ll start flirting with someone who values electrolytes.',
-      '🌞 Your body is currently running on stress, caffeine, and unresolved issues. Add water.'
+      '🌞 Your body is currently running on stress, caffeine, and unresolved issues. Add water.',
+      "😘 Hydrate. You're too pretty to be this dumb about water.",
+      "🍋 You're hot. Also probably dehydrated. Both, honestly."
     ]
   },
   {
@@ -64,7 +71,10 @@ const waterSlots = [
       '❤️ Drink water, gorgeous. We’re aiming for “thriving,” not “surviving somehow.”',
       '💦 Hydrate before dinner and stop acting like Diet coke fixes everything.',
       '🌿 Your body deserves water after carrying your attractive dumbass all day.',
-      '✨ Fun fact: water improves mood, skin, and your chances of not becoming dust.'
+      '✨ Fun fact: water improves mood, skin, and your chances of not becoming dust.',
+      "🥤 That's Diet Coke. That's not water. That's not me approving this.",
+      "😏 Drink water and I'll think about being nice to you later.",
+      "❤️‍🔥 You're on fire today. Literally. Drink water."
     ]
   },
   {
@@ -77,7 +87,8 @@ const waterSlots = [
       '💦 One glass of water won’t kill you. Probably.',
       '🔥 Imagine being hydrated & hot. You’re halfway there already.',
       '😍 🌿 Go sip some water, you beautiful disaster.',
-      '💧 Drink water. Being cute won’t save you forever.'
+      '💧 Drink water. Being cute won’t save you forever.',
+      "💧 Drink water. I can't kiss a raisin."
     ]
   }
 ];
@@ -141,8 +152,26 @@ async function sendTelegramMessage(text) {
   }
 }
 
+// Store active jobs so we can stop them before rescheduling
+let activeJobs = [];
+
+// ==================== STOP ALL PREVIOUS JOBS ====================
+function stopAllJobs() {
+  activeJobs.forEach(job => {
+    try {
+      job.stop();
+    } catch (e) { }
+  });
+  activeJobs = [];
+  console.log('🧹 Stopped all previous scheduled jobs');
+}
+
 // ==================== DAILY SCHEDULER ====================
 function scheduleTodaysReminders() {
+
+  stopAllJobs();  // Stop existing jobs
+
+  console.log(`\n🗓️ Planning fresh reminders — ${new Date().toLocaleDateString()}`);
   console.log(`\n🗓️ [${new Date().toLocaleString()}] Planning today's random reminders...`);
 
   // Water reminders
@@ -152,13 +181,14 @@ function scheduleTodaysReminders() {
 
     const cronExpr = `${minute} ${hour} * * *`;
 
-    cron.schedule(cronExpr, () => {
+    const job = cron.schedule(cronExpr, () => {
       sendTelegramMessage(message);
     }, {
       timezone: TIMEZONE,
       name: `water-${i}`
     });
 
+    activeJobs.push(job);
     console.log(`${timeStr} → W: ${message}`);
   });
 
@@ -166,13 +196,14 @@ function scheduleTodaysReminders() {
   const { hour: medHour, minute: medMinute, timeStr: medTime } = getRandomTimeInSlot(medicineSlot.start, medicineSlot.end);
   const medMessage = "💊 MEDICINE :  " + getRandomMessage(medicineSlot.messages);
 
-  cron.schedule(`${medMinute} ${medHour} * * *`, () => {
+  const medJob = cron.schedule(`${medMinute} ${medHour} * * *`, () => {
     sendTelegramMessage(medMessage);
   }, {
     timezone: TIMEZONE,
     name: `medicine`
   });
 
+  activeJobs.push(medJob);
   console.log(`${medTime} → M: ${medMessage}`);
 }
 
